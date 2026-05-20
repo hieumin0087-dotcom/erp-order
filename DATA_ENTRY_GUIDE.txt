@@ -1,0 +1,99 @@
+# 🎯 ERP Data Entry System - User Guide
+
+## 📝 System Overview
+
+This is a **2-step manual data entry system** for 100% accurate ERP form filling:
+
+1. **Step 1**: Use GUI app to enter all data
+2. **Step 2**: Bot reads saved data and fills ERP form automatically
+
+## 🚀 How to Use
+
+### Step 1: Enter Data Manually
+
+```powershell
+cd "c:\Trợ lý AI"
+py erp_data_entry.py
+```
+
+A window will open with all form fields. Fill in:
+
+**Influencer Information:**
+- Nickname / Channel Name
+- Contact Type (Email/Phone/WeChat)
+- Contact Information
+- Cooperation Date
+- Cooperation Status
+- Influencer Quality
+- Contact Email
+
+**Social Media:**
+- Platform (Youtube/TikTok/Instagram)
+- Channel Name
+- Channel Link
+- Followers Count
+- Followers Unit (H/K/M)
+
+**Delivery Information:**
+- Recipient Name
+- Phone Number
+- Country
+- Province / State
+- City
+- Detailed Address
+- Postal Code
+
+Click **"💾 Save Data"** when done.
+
+### Step 2: Auto-Fill ERP Form
+
+```powershell
+py bot_erp_filler.py
+```
+
+Bot will:
+1. Read `erp_data.json` (created in Step 1)
+2. Open ERP website
+3. Wait for you to login
+4. Navigate to form
+5. Fill ALL fields automatically with 100% accuracy
+6. Wait for you to review and submit
+
+## ✨ Features
+
+✅ **Manual Data Entry** - You control all data  
+✅ **100% Accuracy** - No AI guessing  
+✅ **Save & Reuse** - Save data for future orders  
+✅ **Easy to Edit** - GUI interface, no coding  
+✅ **Load Previous** - Reload last saved data  
+
+## 📁 Files
+
+- `erp_data_entry.py` - GUI data entry app
+- `bot_erp_filler.py` - Auto form filler bot
+- `erp_data.json` - Saved data file (auto-created)
+
+## 💡 Tips
+
+- **First time**: Fill all fields in data entry app
+- **Repeat orders**: Click "Load Last" to reload previous data
+- **Edit**: Modify any fields before saving
+- **Verify**: Always review form before submitting
+
+## 🔄 Workflow
+
+```
+User → Data Entry GUI → Save JSON → Bot Reads JSON → Fill ERP Form → User Reviews → Submit
+```
+
+## ⚙️ Change Language
+
+To change ERP interface to English:
+1. Login to ERP
+2. Look for Language/语言 settings
+3. Select English
+4. Save preferences
+
+## ✅ Ready to Use!
+
+No AI extraction errors. No missing fields. 100% manual control.

@@ -1,0 +1,45 @@
+# 🚀 HƯỚNG DẪN NHANH - ERP BOT
+
+## ✅ CÁCH TẠO SHORTCUT (PHỔ BIẾN NHẤT)
+
+### Bước 1: Double-click file này
+```
+C:\Trợ lý AI\CREATE_SHORTCUT.vbs
+```
+
+→ Icon "ERP Bot" sẽ xuất hiện trên Desktop
+
+### Bước 2: Sử dụng Bot
+
+Click vào icon "ERP Bot" trên Desktop, sau đó:
+1. Nhập email influencer
+2. Nhập URL ERP
+3. Chờ bot hoàn thành
+
+---
+
+## 📌 CÁCH CHẠY TRỰC TIẾP (KHÔNG CẦN SHORTCUT)
+
+### Option 1: Dùng Batch File
+```
+Double-click: c:\Trợ lý AI\launch_bot.bat
+```
+
+### Option 2: Dùng Command Line
+```powershell
+cd "c:\Trợ lý AI"
+py bot_erp_cli.py <email> <url>
+```
+
+**Ví dụ:**
+```powershell
+py bot_erp_cli.py influencer@gmail.com https://erp.site.com
+```
+
+---
+
+## ⚠️ LƯU Ý
+
+- File `CREATE_SHORTCUT.vbs` là file VBScript, chỉ cần double-click
+- KHÔNG cần chạy qua Python
+- Shortcut sẽ tự động tạo trên Desktop

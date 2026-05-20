@@ -1,0 +1,21 @@
+﻿# Sensitive files
+.env
+
+# Local state / databases
+*.json
+!requirements.txt
+
+# Images and Screenshots
+*.png
+*.jpg
+*.jpeg
+
+# Python Cache
+__pycache__/
+*.pyc
+
+# Local Browser Profiles and temporary assets
+*profile/
+*assets/
+*pictures/
+*images/

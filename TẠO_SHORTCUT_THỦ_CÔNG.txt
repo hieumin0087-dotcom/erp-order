@@ -1,0 +1,62 @@
+# 🎯 HƯỚNG DẪN TẠO SHORTCUT THỦ CÔNG
+
+## ⚠️ Vấn đề: VBS không hoạt động với ký tự tiếng Việt
+
+## ✅ Giải pháp: Tạo shortcut bằng tay (30 giây)
+
+### Bước 1: Mở thư mục
+```
+Bấm Win + E
+Dán vào thanh địa chỉ: c:\Trợ lý AI
+```
+
+### Bước 2: Click phải vào file `launch_bot.bat`
+
+### Bước 3: Chọn "Send to" → "Desktop (create shortcut)"
+
+### Bước 4: Đổi tên shortcut
+- Click phải vào shortcut trên Desktop
+- Chọn "Rename"
+- Đổi thành: **ERP Bot**
+
+---
+
+## 🚀 CÁCH SỬ DỤNG
+
+### Click vào icon "ERP Bot" trên Desktop
+
+Bot sẽ hỏi:
+1. **Email người gửi** (ví dụ: `influencer@gmail.com`)
+2. **URL ERP** (ví dụ: `https://erp.example.com`)
+
+Bot sẽ tự động:
+- Đọc email
+- Trích xuất số điện thoại và link YouTube  
+- Mở trình duyệt
+- Điền form
+- Tự động thoát sau 30 giây
+
+---
+
+## 🔧 HOẶC CHẠY TRỰC TIẾP
+
+### Cách 1: Double-click file
+```
+c:\Trợ lý AI\launch_bot.bat
+```
+
+### Cách 2: Command line
+```powershell
+cd "c:\Trợ lý AI"
+py bot_erp_cli.py <email> <url>
+```
+
+**Ví dụ:**
+```powershell
+py bot_erp_cli.py test@gmail.com https://erp.site.com
+```
+
+---
+
+## ✅ XONG!
+Không cần cài thêm gì, không cần code, chỉ tạo shortcut và dùng thôi!
