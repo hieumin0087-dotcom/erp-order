@@ -2176,8 +2176,29 @@ If you don't know, return "Unknown"
                 return
                 
             all_body = ""
-            email_count = min(len(ids), 10)
+            email_count = min(len(ids), 35)  # Scan up to 35 emails in the thread
             
+            extracted_product_link = ""
+            import re as _re
+            
+            prod_regex = _re.compile(
+                r'https?://[^\s<>"]*?(?:colestore\.ru|bags-store\.ru|tikhubs\.ru|bags-store\.com)/[^\s<>"]*?(?:bags|shoes|product|\.html)[^\s<>"]*',
+                _re.IGNORECASE
+            )
+            
+            # --- OPTIMIZED CONTENT EXTRACTION ---
+            def clean_html(html_content):
+                try:
+                    from bs4 import BeautifulSoup
+                    soup = BeautifulSoup(html_content, "html.parser")
+                    # Remove script and style elements
+                    for script_or_style in soup(["script", "style"]):
+                        script_or_style.extract()
+                    return soup.get_text(separator=' ', strip=True)
+                except:
+                    return _re.sub('<[^<]+?>', '', html_content)
+
+            fetched_emails = []
             for email_id in ids[-email_count:]:
                 try:
                     status, msg = mail.fetch(email_id, "(RFC822)")
@@ -2199,42 +2220,37 @@ If you don't know, return "Unknown"
                                 except: pass
                             elif content_type == "text/html" and not body:
                                 try:
-                                    html = part.get_payload(decode=True).decode('utf-8', 'ignore')
-                                    import re
-                                    body += re.sub('<[^<]+?>', '', html)
+                                    html_content = part.get_payload(decode=True).decode('utf-8', 'ignore')
+                                    body += clean_html(html_content)
                                 except: pass
                     else:
                         try:
                             body = msg.get_payload(decode=True).decode('utf-8', 'ignore')
+                            if msg.get_content_type() == "text/html":
+                                body = clean_html(body)
                         except: pass
                     
-                    all_body += f"\n--- EMAIL SUBJECT: {subject} ---\n{body}\n"
+                    # Search for detailed product link locally in this email body (scans all 35 emails)
+                    if not extracted_product_link:
+                        match = prod_regex.search(body)
+                        if match:
+                            extracted_product_link = match.group(0)
+                            print(f"🎯 Local pre-scan found product link: {extracted_product_link}")
+                    
+                    # Clean up HTML elements in the general text if any slipped through
+                    if '<div' in body or '<table' in body or '<body' in body:
+                        body = clean_html(body)
+                        
+                    clean_text = f"\n--- EMAIL SUBJECT: {subject} ---\n{body}\n"
+                    fetched_emails.append(clean_text)
                 except Exception as e:
                     print(f"Error reading email {email_id}: {e}")
             
             mail.logout()
             
-            # --- OPTIMIZED CONTENT EXTRACTION ---
-            def clean_html(html_content):
-                try:
-                    from bs4 import BeautifulSoup
-                    soup = BeautifulSoup(html_content, "html.parser")
-                    # Remove script and style elements
-                    for script_or_style in soup(["script", "style"]):
-                        script_or_style.extract()
-                    return soup.get_text(separator=' ', strip=True)
-                except:
-                    import re
-                    return re.sub('<[^<]+?>', '', html_content)
-
-            # Re-process all_body if it was raw HTML
-            clean_body = []
-            for line in all_body.split('\n'):
-                if '<div' in line or '<table' in line or '<body' in line:
-                    clean_body.append(clean_html(line))
-                else:
-                    clean_body.append(line)
-            all_body = '\n'.join(clean_body)
+            # Keep only the latest 5 emails for AI shipping extraction to save massive tokens
+            ai_emails = fetched_emails[-5:]
+            all_body = "".join(ai_emails)
             
             if len(all_body) > 25000:
                 all_body = all_body[-25000:]
@@ -2414,23 +2430,27 @@ JSON FORMAT:
                 print(f"  Still missing after body fallback: {missing}")
 
             # --- REGEX FALLBACK FOR PRODUCT LINK ---
-            # If AI missed it, search body for specific product paths first
+            # If AI missed it, first try restoring the link found in the pre-scan of all 35 emails
             if not shipping_data.get("product_link"):
-                import re
-                shopping_patterns_detailed = [
-                    r'https?://[^\s<>"]*?(?:colestore\.ru|bags-store\.ru|tikhubs\.ru|bags-store\.com)/[^\s<>"]*?(?:bags|shoes|product|\.html)[^\s<>"]*',
-                ]
-                
-                found_url = None
-                for p in shopping_patterns_detailed:
-                    found = re.search(p, all_body, re.IGNORECASE)
-                    if found:
-                        found_url = found.group(0)
-                        print(f"✅ Regex found detailed product link: {found_url}")
-                        break
-                            
-                if found_url:
-                    shipping_data["product_link"] = found_url
+                if extracted_product_link:
+                    shipping_data["product_link"] = extracted_product_link
+                    print(f"🎯 Restored product link from 35-email pre-scan: {extracted_product_link}")
+                else:
+                    import re
+                    shopping_patterns_detailed = [
+                        r'https?://[^\s<>"]*?(?:colestore\.ru|bags-store\.ru|tikhubs\.ru|bags-store\.com)/[^\s<>"]*?(?:bags|shoes|product|\.html)[^\s<>"]*',
+                    ]
+                    
+                    found_url = None
+                    for p in shopping_patterns_detailed:
+                        found = re.search(p, all_body, re.IGNORECASE)
+                        if found:
+                            found_url = found.group(0)
+                            print(f"✅ Regex found detailed product link in short body: {found_url}")
+                            break
+                                
+                    if found_url:
+                        shipping_data["product_link"] = found_url
 
             # Clean up generic homepages to prevent useless/hallucinated details
             prod_link = shipping_data.get("product_link") or ""
