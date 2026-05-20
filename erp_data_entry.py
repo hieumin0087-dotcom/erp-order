@@ -2629,17 +2629,25 @@ JSON FORMAT:
                 
                 self.active_tasks -= 1
                 
-                # Automatically wait for social scraper to finish, then auto-submit (both GUI and API modes)
-                def auto_submit_when_done():
-                    print("⏳ Waiting for social scraper to finish before auto-submitting...")
-                    while self.active_tasks > 0:
-                        time.sleep(1)
-                    print("🚀 All scrapers finished! Opening browser to submit form.")
-                    self.root.after(0, lambda: self.save_data(silent=True))
+                 # Check if we successfully found a product link
+                has_product_link = bool(prod_url and prod_url.strip().startswith("http"))
                 
-                bg_thread = threading.Thread(target=auto_submit_when_done)
-                bg_thread.daemon = True
-                bg_thread.start()
+                if has_product_link:
+                    # Automatically wait for social scraper to finish, then auto-submit (both GUI and API modes)
+                    def auto_submit_when_done():
+                        print("⏳ Waiting for social scraper to finish before auto-submitting...")
+                        while self.active_tasks > 0:
+                            time.sleep(1)
+                        print("🚀 All scrapers finished! Opening browser to submit form.")
+                        self.root.after(0, lambda: self.save_data(silent=True))
+                    
+                    bg_thread = threading.Thread(target=auto_submit_when_done)
+                    bg_thread.daemon = True
+                    bg_thread.start()
+                else:
+                    print("⚠️ Product link is missing. Auto-submit bypassed. Please enter the product link manually in the GUI to continue.")
+                    if not silent:
+                        self.root.after(0, lambda: messagebox.showinfo("Manual Action Required", "⚠️ Delivery info parsed, but could not find a product link in the email.\n\nPlease enter the product link in the app to continue!"))
 
             self.root.after(0, update_ui)
             
