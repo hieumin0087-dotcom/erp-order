@@ -2583,25 +2583,21 @@ JSON FORMAT:
                 
                 self.email_reader_input.config(state="normal")
                 msg = f"✅ Complete automation finished for:\n{email_address}\n\n✓ Delivery info filled\n✓ Product scraped\n✓ GSheet lookup done"
-                if not silent:
-                    messagebox.showinfo("Success!", msg)
-                else:
-                    print(f"Success! {msg.replace(chr(10), ' ')}")
+                print(f"Success! {msg.replace(chr(10), ' ')}")
                 
                 self.active_tasks -= 1
                 
-                # If silent (API mode), wait for social scraper then auto-submit
-                if silent:
-                    def auto_submit_when_done():
-                        print("⏳ API Mode: Waiting for social scraper to finish before auto-submitting...")
-                        while self.active_tasks > 0:
-                            time.sleep(1)
-                        print("🚀 All scrapers finished! Opening browser to submit form.")
-                        self.root.after(0, lambda: self.save_data(silent=True))
-                    
-                    bg_thread = threading.Thread(target=auto_submit_when_done)
-                    bg_thread.daemon = True
-                    bg_thread.start()
+                # Automatically wait for social scraper to finish, then auto-submit (both GUI and API modes)
+                def auto_submit_when_done():
+                    print("⏳ Waiting for social scraper to finish before auto-submitting...")
+                    while self.active_tasks > 0:
+                        time.sleep(1)
+                    print("🚀 All scrapers finished! Opening browser to submit form.")
+                    self.root.after(0, lambda: self.save_data(silent=True))
+                
+                bg_thread = threading.Thread(target=auto_submit_when_done)
+                bg_thread.daemon = True
+                bg_thread.start()
 
             self.root.after(0, update_ui)
             
