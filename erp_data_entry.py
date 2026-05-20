@@ -2153,12 +2153,20 @@ If you don't know, return "Unknown"
             mail.login(GMAIL, PASS)
             mail.select("inbox")
             
-            # Search for emails
-            status, data = mail.search(None, f'(FROM "{email_address}")')
-            ids = data[0].split()
+            # Search for emails from the influencer
+            status_from, data_from = mail.search(None, f'(FROM "{email_address}")')
+            ids_from = data_from[0].split() if data_from[0] else []
+            
+            # Search for emails sent to the influencer
+            status_to, data_to = mail.search(None, f'(TO "{email_address}")')
+            ids_to = data_to[0].split() if data_to[0] else []
+            
+            # Combine, deduplicate, and sort numerically to maintain chronological order
+            all_ids = set(ids_from + ids_to)
+            ids = sorted(list(all_ids), key=lambda x: int(x))
             
             if not ids:
-                msg = f"No emails found from {email_address}"
+                msg = f"No emails found from or to {email_address}"
                 if not silent:
                     self.root.after(0, lambda: messagebox.showwarning("Not Found", msg))
                 else:
@@ -2238,7 +2246,7 @@ If you don't know, return "Unknown"
 You are an expert logistics coordinator. Extract the shipping/delivery information from the email content below.
 Also search for any Product Link (e.g. tikhubs.ru, colestore.ru, bags-store.ru, or any influencer chosen bag link) mentioned in the text.
 
-ALL EMAILS FROM {email_address}:
+ALL EMAILS FROM/TO {email_address}:
 {all_body}
 
 RULES:
@@ -2246,7 +2254,8 @@ RULES:
 2. If province is missing but you know it from the city (e.g. Scranton -> Pennsylvania), fill it in.
 3. Do NOT strip domains or protocols from the product link. Extract the absolute URL exactly as written in the email.
 4. PRODUCT LINK: Find the specific product details URL (e.g., containing '/bags/', '/shoes/', '/product/', or ending in '.html') chosen by the influencer. NEVER extract the home page URL (e.g., https://www.colestore.ru/ or https://www.tikhubs.ru/) if a specific product details URL is available in any email in the thread.
-5. Return ONLY valid JSON.
+5. If NO specific product link or product URL is found in the email text, you MUST leave the "product_link" field completely empty (""). DO NOT invent, hallucinate, or make up a product link under any circumstances! DO NOT use generic example URLs.
+6. Return ONLY valid JSON.
 
 JSON FORMAT:
 {{
@@ -2405,17 +2414,11 @@ JSON FORMAT:
                 print(f"  Still missing after body fallback: {missing}")
 
             # --- REGEX FALLBACK FOR PRODUCT LINK ---
-            # If AI missed it, search body for specific product paths first, then fall back to domains
+            # If AI missed it, search body for specific product paths first
             if not shipping_data.get("product_link"):
                 import re
                 shopping_patterns_detailed = [
                     r'https?://[^\s<>"]*?(?:colestore\.ru|bags-store\.ru|tikhubs\.ru|bags-store\.com)/[^\s<>"]*?(?:bags|shoes|product|\.html)[^\s<>"]*',
-                ]
-                shopping_patterns_general = [
-                    r'https?://[^\s<>"]*?colestore\.ru[^\s<>"]*',
-                    r'https?://[^\s<>"]*?bags-store\.ru[^\s<>"]*',
-                    r'https?://[^\s<>"]*?tikhubs\.ru[^\s<>"]*',
-                    r'https?://[^\s<>"]*?bags-store\.com[^\s<>"]*',
                 ]
                 
                 found_url = None
@@ -2425,17 +2428,22 @@ JSON FORMAT:
                         found_url = found.group(0)
                         print(f"✅ Regex found detailed product link: {found_url}")
                         break
-                        
-                if not found_url:
-                    for p in shopping_patterns_general:
-                        found = re.search(p, all_body, re.IGNORECASE)
-                        if found:
-                            found_url = found.group(0)
-                            print(f"✅ Regex found general domain fallback link: {found_url}")
-                            break
                             
                 if found_url:
                     shipping_data["product_link"] = found_url
+
+            # Clean up generic homepages to prevent useless/hallucinated details
+            prod_link = shipping_data.get("product_link") or ""
+            if prod_link:
+                cleaned_link = prod_link.strip().lower().rstrip("/")
+                if cleaned_link in [
+                    "https://www.tikhubs.ru", "https://tikhubs.ru", "http://www.tikhubs.ru", "http://tikhubs.ru",
+                    "https://www.colestore.ru", "https://colestore.ru", "http://www.colestore.ru", "http://colestore.ru",
+                    "https://www.bags-store.ru", "https://bags-store.ru", "http://www.bags-store.ru", "http://bags-store.ru",
+                    "https://www.bags-store.com", "https://bags-store.com", "http://www.bags-store.com", "http://bags-store.com"
+                ]:
+                    print(f"⚠️ Cleaned up generic homepage URL: {prod_link} -> Setting to empty.")
+                    shipping_data["product_link"] = ""
 
             # VERIFY ADDRESS
             shipping_data = self.verify_and_complete_address(shipping_data)
