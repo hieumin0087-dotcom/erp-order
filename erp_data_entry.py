@@ -2547,10 +2547,12 @@ JSON FORMAT:
                         self.fields['contact_email'].insert(0, email_address)
                 
                 # Fill Product Link
+                self.fields['product_link'].delete(0, "end")
                 if prod_url and prod_url.startswith("http"):
-                    self.fields['product_link'].delete(0, "end")
                     self.fields['product_link'].insert(0, prod_url)
                     self.fields['product_link'].config(fg='black')
+                else:
+                    self.fields['product_link'].config(fg='gray')
 
                 # Fill Product Info (from synchronous scrape above)
                 if product_info:
@@ -2592,6 +2594,18 @@ JSON FORMAT:
                         self.fields['product_detail_image_3'].insert(0, images[3])
                         self.fields['product_detail_image_3'].config(state='disabled')
                     print(f"✅ Product fields filled in GUI: {pname}")
+                else:
+                    # Clear product details if no link/info was found
+                    self.fields['product_name'].delete(0, 'end')
+                    self.fields['product_brand'].delete(0, 'end')
+                    self.fields['product_sku'].delete(0, 'end')
+                    self.fields['product_main_image'].config(state='normal')
+                    self.fields['product_main_image'].delete(0, 'end')
+                    self.fields['product_main_image'].config(state='disabled')
+                    for img_f in ['product_detail_image_1', 'product_detail_image_2', 'product_detail_image_3']:
+                        self.fields[img_f].config(state='normal')
+                        self.fields[img_f].delete(0, 'end')
+                        self.fields[img_f].config(state='disabled')
 
                 # Social Link (GSheet)
                 social_url = self.lookup_influencer_link(email_address)
