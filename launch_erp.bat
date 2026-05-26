@@ -1,4 +1,5 @@
-@echo off
+﻿@echo off
+chcp 65001 > nul
 cd /d "c:\Trợ lý AI"
-py erp_data_entry.py
+"C:\Users\Admin\AppData\Local\Programs\Python\Python313\python.exe" erp_data_entry.py
 pause
