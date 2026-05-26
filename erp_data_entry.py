@@ -2933,16 +2933,34 @@ JSON FORMAT:
                     if any(x in current_url for x in ['/login', '/admin/login', 'auth']) or page.locator('input[placeholder="账号"], input[name="username"]').count() > 0:
                         print("🔐 Login page detected - Attempting auto-fill...")
                         user_input = page.locator('input[placeholder="账号"], input[name="username"]').first
-                        if user_input.count() > 0: user_input.fill("panjinying")
+                        if user_input.count() > 0:
+                            user_input.fill("panjinying")
                         pass_input = page.locator('input[placeholder="密码"], input[type="password"]').first
-                        if pass_input.count() > 0: pass_input.fill("LIrong2025")
+                        if pass_input.count() > 0:
+                            pass_input.fill("LIrong2025")
                         page.wait_for_timeout(500)
                         login_btn = page.locator('button:has-text("登陆"), button:has-text("登录"), input[type="submit"]').first
                         if login_btn.count() > 0:
                             login_btn.click()
-                            page.wait_for_load_state("networkidle", timeout=5000)
+                            
+                            # Wait for login completion to handle slide verification or network delay
+                            print("⏳ Waiting for login completion (solve slide verification if present)...")
+                            login_success = False
+                            for _ in range(45):  # Wait up to 45 seconds
+                                page.wait_for_timeout(1000)
+                                curr = page.url.lower()
+                                # If we are no longer on the login page and not on a 401/403 page
+                                if not any(x in curr for x in ['/login', 'auth']) and page.locator('input[placeholder="账号"]').count() == 0:
+                                    # Double check we are not on a 401/403 page either
+                                    if not any(x in curr for x in ['/401', '/403']):
+                                        print(f"🎉 Login successful! Active URL: {page.url}")
+                                        login_success = True
+                                        break
+                            if not login_success:
+                                print("⚠️ Login timeout. Please ensure credentials are correct and captcha is solved.")
                             page.wait_for_timeout(2000)
                 except Exception as e: print(f"    Auto-login error: {e}")
+
 
             def get_target_locator(selector):
                 """Search for selector across main page and all nested frames."""
