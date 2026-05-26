@@ -1499,6 +1499,13 @@ class DataEntryApp:
                                 task['response_queue'].put(Exception("Save Order button not found"))
                         else:
                             task['response_queue'].put(Exception("No active page"))
+
+                    elif action == 'eval':
+                        if self.active_page:
+                            res = self.active_page.evaluate(task['expr'])
+                            task['response_queue'].put(res)
+                        else:
+                            task['response_queue'].put(Exception("No active page"))
                         
                     self.browser_queue.task_done()
                 except Exception as e:
@@ -4153,6 +4160,9 @@ def start_api_server():
     class GotoRequest(BaseModel):
         url: str
 
+    class EvalRequest(BaseModel):
+        expr: str
+
     # ── Endpoints ───────────────────────────────────────────
 
     @api.get("/")
@@ -4389,23 +4399,31 @@ def start_api_server():
 
     @api.post("/browser/save-order")
     def api_browser_save_order():
-        """
-        Remote click the '保存订单' button in the active browser page.
-        """
+        """Remote click the '保存订单' button in the active browser page."""
         if _app_instance is None:
             return JSONResponse(status_code=503, content={"error": "App not ready"})
         try:
-            def _click():
-                if _app_instance.active_page:
-                    # Find the button and click it
-                    btn = _app_instance.active_page.locator('button:has-text("保存订单"), button:has-text("保存")').first
-                    if btn.count() > 0:
-                        btn.click()
-                        print("🎉 Save Order button clicked remotely via API!")
-                    else:
-                        print("❌ Save Order button not found on active page!")
-            _app_instance.root.after(0, _click)
-            return {"status": "ok", "message": "Save Order command dispatched"}
+            resp_q = queue.Queue()
+            _app_instance.browser_queue.put({'action': 'save-order', 'response_queue': resp_q})
+            res = resp_q.get(timeout=30)
+            if isinstance(res, Exception):
+                return JSONResponse(status_code=500, content={"error": str(res)})
+            return {"status": "ok", "message": "Save Order clicked"}
+        except Exception as e:
+            return JSONResponse(status_code=500, content={"error": str(e)})
+
+    @api.post("/browser/eval")
+    def api_browser_eval(req: EvalRequest):
+        """Evaluate JS expression on active browser page."""
+        if _app_instance is None:
+            return JSONResponse(status_code=503, content={"error": "App not ready"})
+        try:
+            resp_q = queue.Queue()
+            _app_instance.browser_queue.put({'action': 'eval', 'expr': req.expr, 'response_queue': resp_q})
+            res = resp_q.get(timeout=30)
+            if isinstance(res, Exception):
+                return JSONResponse(status_code=500, content={"error": str(res)})
+            return {"status": "ok", "result": res}
         except Exception as e:
             return JSONResponse(status_code=500, content={"error": str(e)})
 
