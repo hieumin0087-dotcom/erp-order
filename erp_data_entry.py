@@ -1438,6 +1438,67 @@ class DataEntryApp:
                             self.active_page = None
                             print("🛑 Browser context closed.")
                         task['response_queue'].put(True)
+
+                    elif action == 'goto':
+                        if not self.browser_ctx:
+                            print("🚀 Launching persistent browser context...")
+                            self.browser_ctx = self.pw_instance.chromium.launch_persistent_context(
+                                user_data_dir="C:/erp_profile",
+                                headless=False
+                            )
+                            self.active_page = self.browser_ctx.pages[0] if self.browser_ctx.pages else self.browser_ctx.new_page()
+                        self.active_page.bring_to_front()
+                        self.active_page.goto(task['url'], wait_until="domcontentloaded")
+                        task['response_queue'].put(True)
+
+                    elif action == 'click':
+                        if not self.browser_ctx:
+                            print("🚀 Launching persistent browser context...")
+                            self.browser_ctx = self.pw_instance.chromium.launch_persistent_context(
+                                user_data_dir="C:/erp_profile",
+                                headless=False
+                            )
+                            self.active_page = self.browser_ctx.pages[0] if self.browser_ctx.pages else self.browser_ctx.new_page()
+                        self.active_page.bring_to_front()
+                        loc = self.active_page.locator(task['selector']).first
+                        if loc.count() > 0:
+                            loc.click()
+                            print(f"🎉 Clicked selector: {task['selector']}")
+                            task['response_queue'].put(True)
+                        else:
+                            print(f"❌ Selector not found: {task['selector']}")
+                            task['response_queue'].put(Exception(f"Selector not found: {task['selector']}"))
+
+                    elif action == 'fill':
+                        if not self.browser_ctx:
+                            print("🚀 Launching persistent browser context...")
+                            self.browser_ctx = self.pw_instance.chromium.launch_persistent_context(
+                                user_data_dir="C:/erp_profile",
+                                headless=False
+                            )
+                            self.active_page = self.browser_ctx.pages[0] if self.browser_ctx.pages else self.browser_ctx.new_page()
+                        self.active_page.bring_to_front()
+                        loc = self.active_page.locator(task['selector']).first
+                        if loc.count() > 0:
+                            loc.fill(task['value'])
+                            print(f"🎉 Filled selector: {task['selector']}")
+                            task['response_queue'].put(True)
+                        else:
+                            print(f"❌ Selector not found: {task['selector']}")
+                            task['response_queue'].put(Exception(f"Selector not found: {task['selector']}"))
+
+                    elif action == 'save-order':
+                        if self.active_page:
+                            btn = self.active_page.locator('button:has-text("保存订单"), button:has-text("保存")').first
+                            if btn.count() > 0:
+                                btn.click()
+                                print("🎉 Save Order button clicked remotely!")
+                                task['response_queue'].put(True)
+                            else:
+                                print("❌ Save Order button not found!")
+                                task['response_queue'].put(Exception("Save Order button not found"))
+                        else:
+                            task['response_queue'].put(Exception("No active page"))
                         
                     self.browser_queue.task_done()
                 except Exception as e:
@@ -4287,17 +4348,12 @@ def start_api_server():
         if _app_instance is None:
             return JSONResponse(status_code=503, content={"error": "App not ready"})
         try:
-            def _goto():
-                if not _app_instance.active_page:
-                    _app_instance.browser_ctx = _app_instance.pw_instance.chromium.launch_persistent_context(
-                        user_data_dir="C:/erp_profile",
-                        headless=False
-                    )
-                    _app_instance.active_page = _app_instance.browser_ctx.pages[0] if _app_instance.browser_ctx.pages else _app_instance.browser_ctx.new_page()
-                _app_instance.active_page.bring_to_front()
-                _app_instance.active_page.goto(req.url, wait_until="domcontentloaded")
-            _app_instance.root.after(0, _goto)
-            return {"status": "ok", "message": f"Navigating to {req.url}"}
+            resp_q = queue.Queue()
+            _app_instance.browser_queue.put({'action': 'goto', 'url': req.url, 'response_queue': resp_q})
+            res = resp_q.get(timeout=30)
+            if isinstance(res, Exception):
+                return JSONResponse(status_code=500, content={"error": str(res)})
+            return {"status": "ok", "message": f"Navigated to {req.url}"}
         except Exception as e:
             return JSONResponse(status_code=500, content={"error": str(e)})
 
@@ -4307,22 +4363,12 @@ def start_api_server():
         if _app_instance is None:
             return JSONResponse(status_code=503, content={"error": "App not ready"})
         try:
-            def _click():
-                if not _app_instance.active_page:
-                    _app_instance.browser_ctx = _app_instance.pw_instance.chromium.launch_persistent_context(
-                        user_data_dir="C:/erp_profile",
-                        headless=False
-                    )
-                    _app_instance.active_page = _app_instance.browser_ctx.pages[0] if _app_instance.browser_ctx.pages else _app_instance.browser_ctx.new_page()
-                _app_instance.active_page.bring_to_front()
-                loc = _app_instance.active_page.locator(req.selector).first
-                if loc.count() > 0:
-                    loc.click()
-                    print(f"🎉 Clicked selector: {req.selector}")
-                else:
-                    print(f"❌ Selector not found: {req.selector}")
-            _app_instance.root.after(0, _click)
-            return {"status": "ok", "message": f"Click command dispatched for {req.selector}"}
+            resp_q = queue.Queue()
+            _app_instance.browser_queue.put({'action': 'click', 'selector': req.selector, 'response_queue': resp_q})
+            res = resp_q.get(timeout=30)
+            if isinstance(res, Exception):
+                return JSONResponse(status_code=500, content={"error": str(res)})
+            return {"status": "ok", "message": f"Clicked {req.selector}"}
         except Exception as e:
             return JSONResponse(status_code=500, content={"error": str(e)})
 
@@ -4332,22 +4378,12 @@ def start_api_server():
         if _app_instance is None:
             return JSONResponse(status_code=503, content={"error": "App not ready"})
         try:
-            def _fill():
-                if not _app_instance.active_page:
-                    _app_instance.browser_ctx = _app_instance.pw_instance.chromium.launch_persistent_context(
-                        user_data_dir="C:/erp_profile",
-                        headless=False
-                    )
-                    _app_instance.active_page = _app_instance.browser_ctx.pages[0] if _app_instance.browser_ctx.pages else _app_instance.browser_ctx.new_page()
-                _app_instance.active_page.bring_to_front()
-                loc = _app_instance.active_page.locator(req.selector).first
-                if loc.count() > 0:
-                    loc.fill(req.value)
-                    print(f"🎉 Filled selector: {req.selector}")
-                else:
-                    print(f"❌ Selector not found: {req.selector}")
-            _app_instance.root.after(0, _fill)
-            return {"status": "ok", "message": f"Fill command dispatched for {req.selector}"}
+            resp_q = queue.Queue()
+            _app_instance.browser_queue.put({'action': 'fill', 'selector': req.selector, 'value': req.value, 'response_queue': resp_q})
+            res = resp_q.get(timeout=30)
+            if isinstance(res, Exception):
+                return JSONResponse(status_code=500, content={"error": str(res)})
+            return {"status": "ok", "message": f"Filled {req.selector}"}
         except Exception as e:
             return JSONResponse(status_code=500, content={"error": str(e)})
 
