@@ -2991,7 +2991,7 @@ JSON FORMAT:
                 try:
                     current_url = page.url
                     # Detect 401/403 unauthorized or session expired
-                    if any(x in current_url for x in ['/401', '/403', '/500']):
+                    if any(x in current_url for x in ['/401', '/403', '/500']) or '401' in page.content() or '未被授权' in page.content():
                         print("⚠️ Detected unauthorized/error page (401/403). Navigating to login...")
                         page.goto("https://erp.bx123.pro/login", wait_until="domcontentloaded", timeout=15000)
                         page.wait_for_timeout(2000)
